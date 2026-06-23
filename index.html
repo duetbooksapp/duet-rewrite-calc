@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMAT Rewrite Calculator</title>
+<style>
+  :root{
+    --bg:#f4f4f2; --card:#ffffff; --line:#e4e4e0; --txt:#1c1c1a; --muted:#6c6c66; --hint:#9a9a93;
+    --green-bg:#e7f5ec; --green-tx:#15683a; --amber-bg:#fbf0d8; --amber-tx:#8a5800;
+    --red-bg:#fbe9e9; --red-tx:#9b1c1c; --info-bg:#e9eefb; --info-tx:#15489e; --surface:#f6f6f4;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1b1b19; --card:#242421; --line:#3a3a36; --txt:#f2f2ee; --muted:#a7a79f; --hint:#84847c;
+      --green-bg:#16331f; --green-tx:#7fd29a; --amber-bg:#3a2c0a; --amber-tx:#f0c673;
+      --red-bg:#3a1717; --red-tx:#f0a0a0; --info-bg:#16243f; --info-tx:#8fb6ef; --surface:#1f1f1d; }
+  }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt);margin:0;padding:20px;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:640px;margin:0 auto;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;}
+  h1{font-size:19px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px;}
+  .sub{font-size:13px;color:var(--hint);margin:4px 0 18px;}
+  .badge{margin-left:auto;font-size:12px;font-weight:500;padding:3px 10px;border-radius:8px;background:var(--info-bg);color:var(--info-tx);}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:5px;}
+  input,select{width:100%;height:40px;padding:0 10px;font-size:15px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--txt);}
+  input:focus,select:focus{outline:none;border-color:var(--info-tx);box-shadow:0 0 0 3px var(--info-bg);}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));}
+  .hintline{font-size:11px;color:var(--hint);margin-top:4px;}
+  .chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:16px 0 18px;cursor:pointer;}
+  .chk input{width:auto;height:auto;}
+  .box{background:var(--surface);border-radius:10px;padding:14px 16px;margin-bottom:18px;}
+  .boxhead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;margin-bottom:12px;color:var(--txt);}
+  .out{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+  .metric{background:var(--surface);border-radius:10px;padding:14px;}
+  .metric .l{font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .metric .v{font-size:23px;font-weight:600;}
+  .verdict{border-radius:10px;padding:14px 16px;font-size:14px;font-weight:500;display:flex;align-items:flex-start;gap:8px;line-height:1.45;}
+  .btn{height:40px;padding:0 16px;font-size:14px;font-weight:500;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--txt);cursor:pointer;}
+  .btn:hover{background:var(--surface);}
+  .btn-primary{background:var(--info-tx);color:#fff;border-color:var(--info-tx);}
+  .gear{margin-left:auto;}
+  .foot{font-size:11px;color:var(--hint);margin-top:16px;line-height:1.5;text-align:center;}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:10;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;max-width:460px;width:100%;}
+  .modal h2{font-size:16px;font-weight:600;margin:0 0 4px;}
+  .modal .sub{margin-bottom:16px;}
+  .rategrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;}
+  .rategrid .full{grid-column:1/-1;font-size:12px;font-weight:500;color:var(--muted);margin-top:6px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+  .warn{background:var(--amber-bg);color:var(--amber-tx);font-size:13px;padding:10px 12px;border-radius:8px;margin-bottom:16px;display:none;}
+  .warn.show{display:block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1><span>DMAT rewrite calculator</span><span class="badge">v1 &middot; term</span></h1>
+    <div class="sub">Direct-mail term &rarr; new 15- or 20-year term. Pays on the increase, if unsolicited.</div>
+
+    <div id="setup" class="warn">No rates saved on this device yet &mdash; tap <strong>My rates</strong> to enter your tier rates, then the dollar figures fill in.</div>
+
+    <div class="grid" style="margin-bottom:14px;">
+      <div>
+        <label>Premium frequency</label>
+        <select id="freq">
+          <option value="monthly" selected>Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="semi">Semi-annually</option>
+          <option value="annual">Annually</option>
+        </select>
+      </div>
+      <div>
+        <label>Current DMAT premium</label>
+        <input id="oldp" type="number" inputmode="decimal" value="50">
+        <div id="h-old" class="hintline">= $600/yr</div>
+      </div>
+      <div>
+        <label>New premium</label>
+        <input id="newp" type="number" inputmode="decimal" value="125">
+        <div id="h-new" class="hintline">= $1,500/yr</div>
+      </div>
+      <div>
+        <label>New product</label>
+        <select id="prod">
+          <option value="15">15-year term</option>
+          <option value="20" selected>20-year term</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="chk"><input id="unsol" type="checkbox" checked> Member-initiated (unsolicited) &mdash; required to get paid</label>
+
+    <div class="box">
+      <div class="boxhead"><span>&#x1F512;</span><span>Your tier &amp; rate &mdash; rates are stored on this device only</span><button class="btn gear" onclick="openSettings()">My rates</button></div>
+      <div class="grid" style="grid-template-columns:2fr 1fr;">
+        <div>
+          <label>Your current 3MMA tier</label>
+          <select id="tier">
+            <option value="1">Tier 1</option>
+            <option value="2">Tier 2</option>
+            <option value="3">Tier 3</option>
+            <option value="4" selected>Tier 4</option>
+          </select>
+        </div>
+        <div>
+          <label>Applied rate</label>
+          <div id="o-rate" style="font-size:20px;font-weight:600;padding-top:6px;">&mdash;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="out">
+      <div class="metric"><div class="l">Creditable increase / yr</div><div id="o-inc" class="v">&mdash;</div></div>
+      <div class="metric"><div class="l">Est. commission</div><div id="o-com" class="v">&mdash;</div></div>
+      <div class="metric"><div class="l">Production credit</div><div id="o-prod" class="v">&mdash;</div></div>
+    </div>
+
+    <div id="verdict" class="verdict" style="background:var(--surface);color:var(--muted);"><span id="v-icon">&#x2022;</span><span id="v-text">Enter the premiums to see the result.</span></div>
+
+    <div class="foot">Your commission rates never leave this browser (they are not in the page source and not on the server). Educational estimate only &mdash; the policy administration manual and your final statement govern. v1 covers term &rarr; term; IUL is coming in v2.</div>
+  </div>
+</div>
+
+<div id="modal" class="modal-bg">
+  <div class="modal">
+    <h2>My commission rates</h2>
+    <div class="sub">Enter your first-year term rates from your Variable Incentive Plan. Saved only on this device.</div>
+    <div class="rategrid">
+      <div class="full">15-year term</div>
+      <div><label>Tier 1 %</label><input id="s15_1" type="number" inputmode="decimal"></div>
+      <div><label>Tier 2 %</label><input id="s15_2" type="number" inputmode="decimal"></div>
+      <div><label>Tier 3 %</label><input id="s15_3" type="number" inputmode="decimal"></div>
+      <div><label>Tier 4 %</label><input id="s15_4" type="number" inputmode="decimal"></div>
+      <div class="full">20-year term</div>
+      <div><label>Tier 1 %</label><input id="s20_1" type="number" inputmode="decimal"></div>
+      <div><label>Tier 2 %</label><input id="s20_2" type="number" inputmode="decimal"></div>
+      <div><label>Tier 3 %</label><input id="s20_3" type="number" inputmode="decimal"></div>
+      <div><label>Tier 4 %</label><input id="s20_4" type="number" inputmode="decimal"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save rates</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var FLOOR = 300;
+  var KEY = 'dmat_rates_v1';
+  var MULT = { monthly:12, quarterly:4, semi:2, annual:1 };
+
+  function el(id){ return document.getElementById(id); }
+  function n(id){ return parseFloat(el(id).value) || 0; }
+  function money(v){ return (v<0?'-$':'$') + Math.abs(Math.round(v)).toLocaleString(); }
+
+  function loadRates(){
+    try{ var r = JSON.parse(localStorage.getItem(KEY)); return (r && r['15'] && r['20']) ? r : null; }
+    catch(e){ return null; }
+  }
+  function ratesComplete(r){
+    if(!r) return false;
+    var t=['1','2','3','4'];
+    for(var i=0;i<t.length;i++){ if(!(r['15'][t[i]]>0) || !(r['20'][t[i]]>0)) return false; }
+    return true;
+  }
+
+  window.openSettings = function(){
+    var r = loadRates() || {'15':{},'20':{}};
+    ['15','20'].forEach(function(p){ ['1','2','3','4'].forEach(function(t){
+      var v = r[p] && r[p][t]; el('s'+p+'_'+t).value = (v>0? v : '');
+    });});
+    el('modal').classList.add('open');
+  };
+  window.closeSettings = function(){ el('modal').classList.remove('open'); };
+  window.saveSettings = function(){
+    var r = {'15':{},'20':{}};
+    ['15','20'].forEach(function(p){ ['1','2','3','4'].forEach(function(t){
+      r[p][t] = parseFloat(el('s'+p+'_'+t).value) || 0;
+    });});
+    localStorage.setItem(KEY, JSON.stringify(r));
+    closeSettings(); calc();
+  };
+
+  function calc(){
+    var rates = loadRates();
+    var setup = el('setup');
+    if(!ratesComplete(rates)){ setup.classList.add('show'); } else { setup.classList.remove('show'); }
+
+    var mult = MULT[el('freq').value] || 1;
+    var oldA = n('oldp')*mult, newA = n('newp')*mult;
+    var prod = el('prod').value, tier = el('tier').value;
+    var ratePct = rates && rates[prod] ? rates[prod][tier] : 0;
+    var rate = (ratePct>0? ratePct : 0)/100;
+    var unsol = el('unsol').checked;
+    var inc = newA - oldA;
+
+    el('h-old').textContent = '= '+money(oldA)+'/yr';
+    el('h-new').textContent = '= '+money(newA)+'/yr';
+    el('o-rate').textContent = (ratePct>0? ratePct+'%' : '—');
+
+    var box=el('verdict'), ic=el('v-icon'), tx=el('v-text');
+    function paint(bg,fg,icon,msg){ box.style.background='var('+bg+')'; box.style.color='var('+fg+')'; ic.innerHTML=icon; tx.textContent=msg; }
+
+    if(!(ratePct>0)){
+      el('o-inc').textContent='—'; el('o-com').textContent='—'; el('o-prod').textContent='—';
+      paint('--surface','--muted','&#x2022;','Set your Tier '+tier+' rate for this product under “My rates.”');
+      return;
+    }
+
+    var com = inc>0 ? inc*rate : 0;
+    var prodc = inc>0 ? inc : 0;
+    el('o-inc').textContent = money(inc);
+    el('o-com').textContent = money(com);
+    el('o-prod').textContent = money(prodc);
+
+    if(!unsol){ paint('--red-bg','--red-tx','&#x26D4;','Solicited — $0 payable. This is a service item only.'); }
+    else if(inc<=0){ paint('--red-bg','--red-tx','&#x2193;','No premium increase — service only, don’t pursue.'); }
+    else if(com<FLOOR){ paint('--amber-bg','--amber-tx','&#x26A0;','Only '+money(com)+' at Tier '+tier+' — below your $'+FLOOR+' floor. Likely skip.'); }
+    else { paint('--green-bg','--green-tx','&#x2714;','Pursue — '+money(com)+' commission on a '+money(inc)+'/yr increase.'); }
+  }
+
+  ['freq','oldp','newp','prod','unsol','tier'].forEach(function(id){
+    el(id).addEventListener('input',calc); el(id).addEventListener('change',calc);
+  });
+
+  if(!ratesComplete(loadRates())){ calc(); openSettings(); } else { calc(); }
+})();
+</script>
+</body>
+</html>
